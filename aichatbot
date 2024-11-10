@@ -1,0 +1,351 @@
+import React, { useState } from 'react';
+import { Search, MessageCircle, FileText, CheckCircle, ArrowRight, Download } from 'lucide-react';
+
+const RelatedDocuments = ({ documents }) => {
+  if (!documents || documents.length === 0) return null;
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <h5 className="text-sm font-semibold mb-2 flex items-center gap-2">
+        <FileText size={16} />
+        Related Documents
+      </h5>
+      <div className="space-y-2">
+        {documents.map((doc, i) => (
+          <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+            <span className="text-sm text-blue-600">{doc.name}</span>
+            <button 
+              className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1"
+              onClick={() => window.open(doc.url, '_blank')}
+            >
+              <Download size={14} />
+              Download
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const MultiCaseAIAgent = () => {
+  const [activeCase, setActiveCase] = useState('mixed_use');
+  const [loading, setLoading] = useState(false);
+  const [analysisShown, setAnalysisShown] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+
+  const generateFollowUpResponse = (question, caseType) => {
+    const defaultResponse = {
+      content: `Analyzing requirements for "${question}" in the context of ${caseType}:`,
+      requirements: [
+        {
+          category: "General Requirements",
+          items: ["Reviewing applicable code sections...", "Checking local amendments..."],
+          source: "Multiple Code Sections"
+        }
+      ],
+      citations: [
+        { 
+          source: "LMC",
+          text: "General code reference",
+          specific_provisions: ["Applicable sections to be determined"]
+        }
+      ],
+      related_forms: [
+        { 
+          name: "General Requirements Checklist",
+          url: "#"
+        }
+      ]
+    };
+
+    const responseLibrary = {
+      mixed_use: {
+        'fire separation': {
+          content: "Based on detailed analysis of Section 707 of the IBC and LMC requirements for mixed-use buildings:",
+          requirements: [
+            {
+              category: "Fire Separation Requirements",
+              items: [
+                "2-hour fire barriers required between residential and commercial uses",
+                "1-hour fire barriers required between office and retail uses",
+                "Separate egress paths required for residential occupants",
+                "Fire alarm and sprinkler systems must be separated by use",
+                "Fire command center required for buildings over 3 stories"
+              ],
+              source: "IBC Section 707 & LMC"
+            }
+          ],
+          citations: [
+            { 
+              source: "IBC Section 707",
+              text: "Fire barrier requirements for mixed use",
+              specific_provisions: ["Section 707.3.10", "Table 707.3.10"]
+            },
+            { 
+              source: "LMC 18A.40.040",
+              text: "Additional local requirements for mixed use buildings",
+              specific_provisions: ["Fire separation requirements"]
+            }
+          ],
+          related_forms: [
+            { name: "Fire Separation Compliance Form", url: "#" },
+            { name: "Mixed Use Fire Safety Checklist", url: "#" }
+          ]
+        },
+        'parking': {
+          content: "Based on LMC 18A.80.030 Parking Requirements for mixed-use developments:",
+          requirements: [
+            {
+              category: "Parking Requirements",
+              items: [
+                "Retail: 1 space per 300 sq ft of gross floor area",
+                "Office: 1 space per 400 sq ft of gross floor area",
+                "Residential: 1.5 spaces per dwelling unit",
+                "Shared parking reduction up to 20% allowed with study",
+                "Electric vehicle charging stations required for 10% of spaces"
+              ],
+              source: "LMC 18A.80.030"
+            }
+          ],
+          citations: [
+            { 
+              source: "LMC 18A.80.030",
+              text: "Base parking requirements",
+              specific_provisions: ["Table 18A.80.030"]
+            },
+            { 
+              source: "LMC 18A.80.060",
+              text: "Shared parking allowances",
+              specific_provisions: ["Reduction calculations"]
+            }
+          ],
+          related_forms: [
+            { name: "Parking Calculation Worksheet", url: "#" },
+            { name: "Shared Parking Study Template", url: "#" }
+          ]
+        },
+        'accessibility': {
+          content: "Based on ADA Standards and IBC Chapter 11 requirements for mixed-use buildings:",
+          requirements: [
+            {
+              category: "Accessibility Requirements",
+              items: [
+                "Accessible route required between all uses",
+                "Elevator required for 4-story building",
+                "Accessible parking requirements vary by use",
+                "Common use amenities must be accessible",
+                "Residential Type A and B unit requirements apply"
+              ],
+              source: "IBC Chapter 11 & 2010 ADA Standards"
+            }
+          ],
+          citations: [
+            { 
+              source: "IBC Chapter 11",
+              text: "Accessibility requirements",
+              specific_provisions: ["1104.4", "1107.6.2.2"]
+            },
+            { 
+              source: "2010 ADA Standards",
+              text: "Federal accessibility standards",
+              specific_provisions: ["206.2.3", "208.2"]
+            }
+          ],
+          related_forms: [
+            { name: "Accessibility Compliance Checklist", url: "#" },
+            { name: "Type A/B Unit Calculator", url: "#" }
+          ]
+        }
+      }
+    };
+
+    const getRelevantCategory = (question) => {
+      const keywords = {
+        'fire separation': ['fire', 'separation', 'barrier', 'rated', 'resistance', 'occupancy'],
+        'parking': ['parking', 'space', 'vehicle', 'car', 'stall', 'ev charging'],
+        'accessibility': ['accessibility', 'accessible', 'ada', 'elevator', 'type a', 'type b']
+      };
+
+      for (const [category, categoryKeywords] of Object.entries(keywords)) {
+        if (categoryKeywords.some(keyword => question.toLowerCase().includes(keyword))) {
+          return category;
+        }
+      }
+      return null;
+    };
+
+    const caseResponses = responseLibrary[caseType] || {};
+    const category = getRelevantCategory(question);
+    const response = category ? caseResponses[category] : null;
+
+    return {
+      content: response?.content || defaultResponse.content,
+      requirements: response?.requirements || defaultResponse.requirements,
+      citations: response?.citations || defaultResponse.citations,
+      related_forms: response?.related_forms || defaultResponse.related_forms
+    };
+  };
+
+  const cases = {
+    mixed_use: {
+      title: "Mixed-Use Development Analysis",
+      initialAnalysis: {
+        content: "Based on analysis of the mixed-use development requirements:",
+        requirements: [
+          "CBD or TOD zoning district required for vertical mixed use",
+          "Minimum 2-hour fire separation between residential and commercial uses",
+          "Separate means of egress required for residential portions",
+          "Parking calculations must be provided for each use type",
+          "ADA accessibility required between all uses"
+        ],
+        citations: [
+          { source: "LMC 18A.40.040", text: "Mixed Use Development Standards" },
+          { source: "IBC Section 707", text: "Fire Barrier Requirements" },
+          { source: "LMC 18A.80.030", text: "Parking Requirements" }
+        ]
+      },
+      query: "4-story mixed-use building with retail, office, and apartments. What are the requirements?",
+      analysis: {
+        thoughtProcess: [
+          "Analyzing multiple aspects of mixed-use development:",
+          "1. Zoning compliance for mixed-use",
+          "2. Building height and setbacks",
+          "3. Parking requirements per use",
+          "4. Fire separation requirements",
+          "5. Accessibility standards"
+        ],
+        subQueries: [
+          "Checking CBD zone requirements...",
+          "Calculating total parking demand...",
+          "Reviewing fire separation standards..."
+        ]
+      },
+      followUpSuggestions: [
+        "What are the fire separation requirements between uses?",
+        "How are parking requirements calculated for mixed use?",
+        "What are the accessibility requirements between uses?"
+      ]
+    }
+  };
+
+  const handleSearch = () => {
+    setLoading(true);
+
+    setChatHistory([{
+      role: 'assistant',
+      type: 'thinking',
+      content: 'Analyzing query and relevant code sections...'
+    }]);
+
+    setTimeout(() => {
+      setLoading(false);
+      setAnalysisShown(true);
+
+      setChatHistory([
+        {
+          role: 'assistant',
+          type: 'analysis',
+          content: "Let me break down your query and analyze each component:",
+          analysis_steps: [
+            {
+              title: "Project Classification",
+              analysis: "This is a mixed-use development combining retail, office, and residential uses vertically in a 4-story building. This triggers specific requirements from multiple code sections.",
+              impact: "Requires review under CBD/TOD zoning standards and special mixed-use provisions."
+            },
+            {
+              title: "Occupancy Analysis",
+              analysis: "The building contains three distinct occupancy types: Mercantile (M) for retail, Business (B) for office, and Residential (R-2) for apartments.",
+              impact: "Fire-rated separations are required based on occupancies."
+            }
+          ],
+          related_documents: [
+            { name: "Zoning Compliance Checklist", url: "#" },
+            { name: "Mixed-Use Building Code Requirements", url: "#" }
+          ]
+        }
+      ]);
+    }, 2000);
+  };
+
+  const handleFollowUp = (question) => {
+    const response = generateFollowUpResponse(question, activeCase);
+    setChatHistory(prevHistory => [
+      ...prevHistory,
+      {
+        role: 'assistant',
+        type: 'follow-up',
+        content: response.content,
+        requirements: response.requirements,
+        citations: response.citations,
+        related_documents: response.related_forms
+      }
+    ]);
+  };
+
+  const currentCase = cases[activeCase];
+
+  return (
+    <div>
+      <h1>{currentCase.title}</h1>
+      <button onClick={handleSearch} className="btn-primary">
+        <Search size={16} />
+        Analyze
+      </button>
+
+      {loading && <div>Loading...</div>}
+
+      {chatHistory.map((entry, index) => (
+        <div key={index} className="mt-4">
+          {entry.type === 'thinking' && (
+            <div>{entry.content}</div>
+          )}
+          {entry.type === 'analysis' && (
+            <div>
+              <h4>Analysis</h4>
+              {entry.analysis_steps && (
+                <ul>
+                  {entry.analysis_steps.map((step, i) => (
+                    <li key={i}>
+                      <strong>{step.title}</strong>: {step.analysis}
+                      <em>Impact: {step.impact}</em>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <RelatedDocuments documents={entry.related_documents} />
+            </div>
+          )}
+          {entry.type === 'follow-up' && (
+            <div>
+              <p>{entry.content}</p>
+              <ul>
+                {entry.requirements.map((req, i) => (
+                  <li key={i}>
+                    <strong>{req.category}</strong>: {req.items.join(', ')}
+                  </li>
+                ))}
+              </ul>
+              <RelatedDocuments documents={entry.related_documents} />
+            </div>
+          )}
+        </div>
+      ))}
+
+      <div className="mt-4">
+        <h4>Follow-Up Suggestions</h4>
+        {currentCase.followUpSuggestions.map((suggestion, i) => (
+          <button 
+            key={i}
+            onClick={() => handleFollowUp(suggestion)}
+            className="btn-secondary mt-2"
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default MultiCaseAIAgent;
